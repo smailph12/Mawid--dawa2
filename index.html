@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#087f8c">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>موعد دوائي - Pharmacie Menasria Ismail</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:#f4f7f8;margin:0;color:#17323a}
+header{background:#087f8c;color:white;padding:18px;text-align:center;position:sticky;top:0;z-index:5}
+header h1{margin:0 0 5px;font-size:23px}.container{max-width:760px;margin:auto;padding:14px}
+.card{background:white;border-radius:14px;padding:15px;margin-bottom:14px;box-shadow:0 2px 8px #0001}
+h2,h3{margin-top:0}input,button,select{width:100%;padding:11px;margin:5px 0;border-radius:9px;border:1px solid #ccd7da;font-size:16px}
+button{background:#087f8c;color:white;border:0;font-weight:bold;cursor:pointer}.secondary{background:#e8f3f4;color:#087f8c}.dangerBtn{background:#b33}.gray{background:#68777b}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.stat{padding:10px;border-radius:10px;text-align:center;background:#eef7f8}.stat b{display:block;font-size:20px}
+.patient{border-right:5px solid #087f8c;padding:12px;background:#fafcfc;margin:10px 0;border-radius:8px}
+.badge{display:inline-block;padding:5px 8px;border-radius:12px;font-size:12px;background:#e8f3f4;margin:2px}.danger{background:#ffe5e5;color:#a40000}.warning{background:#fff0d6;color:#8a5600}.ok{background:#e4f6e9;color:#17652a}
+.small{font-size:13px;color:#65777c}.hidden{display:none}.actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+label{font-size:14px;font-weight:bold}.toolbar{display:grid;grid-template-columns:2fr 1fr;gap:7px}
+.empty{text-align:center;padding:20px;color:#65777c}
+@media(max-width:520px){.grid,.toolbar,.actions{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.stats .stat:last-child{grid-column:1/-1}}
+</style>
+</head>
+<body>
+<header>
+<h1>📅 موعد دوائي</h1>
+<div>Pharmacie Menasria Ismail</div>
+</header>
+
+<div class="container">
+
+<div class="card" id="remCard">
+<h2>🔔 تذكيرات اليوم</h2>
+<div id="remList"></div>
+<div class="actions">
+<button id="installBtn" class="secondary hidden" onclick="installApp()">📲 تثبيت التطبيق</button>
+<button id="notifBtn" class="secondary" onclick="enableNotif()">🔔 تفعيل الإشعارات</button>
+</div>
+</div>
+
+<div class="card">
+<h2 id="formTitle">➕ إضافة مريض</h2>
+<input id="name" placeholder="اسم ولقب المريض">
+<input id="phone" type="tel" placeholder="رقم الهاتف">
+<div class="grid">
+<div><label>الهدف / المرض المزمن</label><input id="goal" placeholder="مثال: السكري"></div>
+<div><label>الأدوية</label><input id="medicine" placeholder="اسم الدواء"></div>
+</div>
+<div class="grid">
+<div><label>آخر تاريخ للعلاج / الصرف</label><input id="date" type="date"></div>
+<div><label>مدة التذكير</label>
+<select id="months"><option value="1">كل شهر</option><option value="2">كل شهرين</option><option value="3" selected>كل 3 أشهر</option><option value="6">كل 6 أشهر</option><option value="12">كل سنة</option></select>
+</div>
+</div>
+<div class="actions">
+<button id="saveBtn" onclick="savePatient()">💾 حفظ الموعد</button>
+<button id="cancelBtn" class="gray hidden" onclick="cancelEdit()">إلغاء التعديل</button>
+</div>
+</div>
+
+<div class="card">
+<h2>👥 قائمة المرضى</h2>
+<div class="toolbar">
+<input id="patientSearch" placeholder="البحث في قائمة المرضى..." oninput="renderPatientList()">
+<select id="patientSort" onchange="renderPatientList()">
+<option value="name">ترتيب حسب الاسم</option>
+<option value="next">ترتيب حسب الموعد القادم</option>
+<option value="date">ترتيب حسب آخر صرف</option>
+</select>
+</div>
+<div id="patientList"></div>
+</div>
+
+<div class="card">
+<h2>🔎 البحث والمواعيد</h2>
+<div class="toolbar">
+<input id="search" placeholder="ابحث بالاسم أو الهاتف أو الدواء..." oninput="render()">
+<select id="filter" onchange="render()">
+<option value="all">كل المرضى</option><option value="soon">خلال 7 أيام</option>
+<option value="today">اليوم</option><option value="late">متأخر</option>
+</select>
+</div>
+<div class="stats">
+<div class="stat">👥 <b id="total">0</b>المرضى</div>
+<div class="stat">🟠 <b id="soon">0</b>خلال 7 أيام</div>
+<div class="stat">🔴 <b id="late">0</b>متأخر</div>
+</div>
+<div id="list"></div>
+</div>
+
+<div class="card">
+<h3>💾 البيانات والنسخ الاحتياطي</h3>
+<p class="small">البيانات محفوظة على هذا الجهاز. يمكنك تصدير نسخة احتياطية واستعادتها لاحقًا.</p>
+<div class="actions">
+<button onclick="exportData()">⬇️ تصدير البيانات</button>
+<button class="secondary" onclick="document.getElementById('file').click()">⬆️ استعادة نسخة</button>
+</div>
+<input id="file" class="hidden" type="file" accept=".json" onchange="importData(event)">
+<button class="dangerBtn" onclick="clearAll()">حذف جميع البيانات</button>
+</div>
+
+<div class="card">
+<div class="small">WhatsApp لا يرسل الرسالة تلقائيًا؛ الزر يفتح رسالة جاهزة إلى رقم المريض بعد اختيارك الإرسال.</div>
+</div>
+</div>
+
+<script>
+let patients=JSON.parse(localStorage.getItem("patients_menasria")||"[]");
+let editId=null;
+
+function save(){
+ localStorage.setItem("patients_menasria",JSON.stringify(patients));
+}
+function addMonths(date,months){
+ let d=new Date(date+"T12:00:00"), day=d.getDate();
+ d.setMonth(d.getMonth()+Number(months));
+ if(d.getDate()<day)d.setDate(0);
+ return d.toISOString().slice(0,10);
+}
+function fmt(s){return new Date(s+"T12:00:00").toLocaleDateString("fr-FR")}
+function daysUntil(s){
+ let a=new Date();a.setHours(0,0,0,0);
+ let b=new Date(s+"T00:00:00");
+ return Math.ceil((b-a)/86400000);
+}
+function escapeHtml(x){
+ return String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+}
+function savePatient(){
+ let name=document.getElementById("name").value.trim(),phone=document.getElementById("phone").value.trim(),
+ goal=document.getElementById("goal").value.trim(),medicine=document.getElementById("medicine").value.trim(),
+ date=document.getElementById("date").value,months=Number(document.getElementById("months").value);
+ if(!name||!phone||!goal||!medicine||!date){alert("أكمل بيانات المريض.");return}
+ let next=addMonths(date,months);
+ if(editId!==null){
+   let p=patients.find(x=>x.id===editId);
+   if(p){Object.assign(p,{name,phone,goal,medicine,date,next,months});delete p.s7;delete p.s4}
+ }else{
+   patients.push({id:Date.now(),name,phone,goal,medicine,date,next,months});
+ }
+ save();clearForm();render();renderPatientList();renderReminders();
+}
+function editPatient(id){
+ let p=patients.find(x=>x.id===id);if(!p)return;
+ editId=id;
+ ["name","phone","goal","medicine","date","months"].forEach(k=>document.getElementById(k).value=p[k]??"");
+ document.getElementById("formTitle").textContent="✏️ تعديل بيانات المريض";
+ document.getElementById("saveBtn").textContent="💾 حفظ التعديل";
+ document.getElementById("cancelBtn").classList.remove("hidden");
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+function cancelEdit(){clearForm()}
+function clearForm(){
+ editId=null;
+ ["name","phone","goal","medicine"].forEach(k=>document.getElementById(k).value="");
+ document.getElementById("date").value=new Date().toISOString().slice(0,10);
+ document.getElementById("months").value="3";
+ document.getElementById("formTitle").textContent="➕ إضافة مريض";
+ document.getElementById("saveBtn").textContent="💾 حفظ الموعد";
+ document.getElementById("cancelBtn").classList.add("hidden");
+}
+function removePatient(id){
+ if(confirm("حذف هذا المريض؟")){patients=patients.filter(p=>p.id!==id);save();render();renderPatientList();renderReminders()}
+}
+function whatsapp(id,stage){
+ let p=patients.find(x=>x.id===id);if(!p)return;
+ let when=stage===7?"بعد 7 أيام تقريبًا":stage===4?"بعد 4 أيام تقريبًا":"قد حان";
+ let msg=`السلام عليكم ${p.name}، تذكير من Pharmacie Menasria Ismail: موعد إعادة علاجكم (${p.medicine}) ${when}. الموعد: ${fmt(p.next)}. بالشفاء العاجل.`;
+ let phone=p.phone.replace(/\D/g,"");if(phone.startsWith("0"))phone="213"+phone.slice(1);
+ if(stage){p["s"+stage]=p.next;save();renderReminders()}
+ window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
+}
+function dueReminders(){
+ let out=[];
+ patients.forEach(p=>{
+  let d=daysUntil(p.next);
+  if(d<0)out.push({p,d,stage:0});
+  else if(d<=4){if(p.s4!==p.next)out.push({p,d,stage:4})}
+  else if(d<=7){if(p.s7!==p.next)out.push({p,d,stage:7})}
+ });
+ return out.sort((a,b)=>a.d-b.d);
+}
+function renderReminders(){
+ let r=dueReminders();
+ document.getElementById("remList").innerHTML=r.length?r.map(({p,d,stage})=>{
+  let label=stage===0?`🔴 متأخر ${Math.abs(d)} يوم`:stage===4?`🟠 تذكير 4 أيام (بعد ${d} يوم)`:`🟡 تذكير 7 أيام (بعد ${d} يوم)`;
+  return `<div class="patient"><b>${escapeHtml(p.name)}</b> — 💊 ${escapeHtml(p.medicine)}<br><span class="badge ${stage===0?'danger':'warning'}">${label}</span> <span class="small">${fmt(p.next)}</span>
+  <div class="actions"><button onclick="whatsapp(${p.id},${stage})">💬 إرسال التذكير</button><button class="secondary" onclick="markRenewed(${p.id})">🔄 تم التجديد</button></div></div>`}).join(""):"<div class='empty'>لا توجد تذكيرات مستحقة اليوم ✅</div>";
+ return r.length;
+}
+async function notifyDue(){
+ let n=renderReminders();
+ if(!n||!("Notification" in window)||Notification.permission!=="granted")return;
+ let key="notified_"+new Date().toISOString().slice(0,10)+"_"+n;
+ if(localStorage.getItem(key))return;localStorage.setItem(key,1);
+ let body=`${n} مريض يحتاج إلى تذكير اليوم`;
+ try{let reg=await navigator.serviceWorker.ready;reg.showNotification("📅 موعد دوائي",{body,icon:"icon-192.png",tag:"due"})}
+ catch{new Notification("📅 موعد دوائي",{body})}
+}
+async function enableNotif(){
+ if(!("Notification" in window)){alert("الإشعارات غير مدعومة على هذا المتصفح.");return}
+ let p=await Notification.requestPermission();
+ if(p==="granted")notifyDue();else alert("لم يتم السماح بالإشعارات.");
+}
+let deferredPrompt=null;
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;document.getElementById("installBtn").classList.remove("hidden")});
+async function installApp(){if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;document.getElementById("installBtn").classList.add("hidden")}
+function markRenewed(id){
+ let p=patients.find(x=>x.id===id);if(!p)return;
+ let base=new Date().toISOString().slice(0,10);
+ p.date=base;p.next=addMonths(base,p.months||3);delete p.s7;delete p.s4;save();render();renderPatientList();renderReminders();
+}
+function renderPatientList(){
+ let q=(document.getElementById("patientSearch")?.value||"").trim().toLowerCase();
+ let sort=document.getElementById("patientSort")?.value||"name";
+ let arr=patients.filter(p=>(p.name+" "+p.phone+" "+p.goal+" "+p.medicine).toLowerCase().includes(q));
+ arr.sort((a,b)=>{
+   if(sort==="next") return a.next.localeCompare(b.next);
+   if(sort==="date") return b.date.localeCompare(a.date);
+   return a.name.localeCompare(b.name,'ar');
+ });
+ document.getElementById("patientList").innerHTML=arr.length?arr.map(p=>{
+   let d=daysUntil(p.next);
+   let cls=d<0?"danger":d<=7?"warning":"ok";
+   let status=d<0?`متأخر ${Math.abs(d)} يوم`:d===0?"الموعد اليوم":`بعد ${d} يوم`;
+   return `<div class="patient">
+     <b>${escapeHtml(p.name)}</b><br>
+     📞 ${escapeHtml(p.phone)}<br>
+     🎯 ${escapeHtml(p.goal)}<br>
+     💊 ${escapeHtml(p.medicine)}<br>
+     📅 آخر صرف: <b>${fmt(p.date)}</b><br>
+     🔔 الموعد القادم: <b>${fmt(p.next)}</b>
+     <div><span class="badge ${cls}">${status}</span></div>
+     <div class="actions">
+       <button class="secondary" onclick="whatsapp(${p.id})">💬 WhatsApp</button>
+       <button class="gray" onclick="editPatient(${p.id})">✏️ تعديل</button>
+       <button onclick="markRenewed(${p.id})">🔄 تجديد</button>
+       <button class="dangerBtn" onclick="removePatient(${p.id})">🗑️ حذف</button>
+     </div>
+   </div>`;
+ }).join(""):"<div class='empty'>لا يوجد مرضى مسجلون.</div>";
+}
+
+function render(){
+ let q=document.getElementById("search").value.trim().toLowerCase(),filter=document.getElementById("filter").value;
+ let soon=patients.filter(p=>daysUntil(p.next)<=7&&daysUntil(p.next)>=0).length;
+ let late=patients.filter(p=>daysUntil(p.next)<0).length;
+ document.getElementById("total").textContent=patients.length;
+ document.getElementById("soon").textContent=soon;document.getElementById("late").textContent=late;
+ let arr=patients.filter(p=>{
+  let text=(p.name+" "+p.phone+" "+p.goal+" "+p.medicine).toLowerCase();
+  let d=daysUntil(p.next);
+  let f=filter==="all"||filter==="soon"?(filter==="all"||d>=0&&d<=7):filter==="today"?d===0:d<0;
+  return text.includes(q)&&f;
+ }).sort((a,b)=>a.next.localeCompare(b.next));
+ document.getElementById("list").innerHTML=arr.length?arr.map(p=>{
+  let d=daysUntil(p.next),cls=d<0?"danger":d<=7?"warning":"ok";
+  let status=d<0?`متأخر ${Math.abs(d)} يوم`:d===0?"الموعد اليوم":`بعد ${d} يوم`;
+  let duration=p.months==1?"شهر":p.months==2?"شهرين":p.months==3?"3 أشهر":p.months==6?"6 أشهر":"سنة";
+  return `<div class="patient">
+   <b>${escapeHtml(p.name)}</b><br>📞 ${escapeHtml(p.phone)}<br>
+   🎯 ${escapeHtml(p.goal)}<br>💊 ${escapeHtml(p.medicine)}<br>
+   📅 آخر صرف: <b>${fmt(p.date)}</b><br>🔔 الموعد القادم: <b>${fmt(p.next)}</b> <span class="badge">${duration}</span>
+   <div><span class="badge ${cls}">${status}</span></div>
+   <div class="actions">
+    <button class="secondary" onclick="whatsapp(${p.id})">💬 WhatsApp</button>
+    <button onclick="markRenewed(${p.id})">🔄 تم تجديد العلاج</button>
+    <button class="gray" onclick="editPatient(${p.id})">✏️ تعديل</button>
+    <button class="dangerBtn" onclick="removePatient(${p.id})">🗑️ حذف</button>
+   </div>
+  </div>`;
+ }).join(""):"<div class='empty'>لا توجد نتائج.</div>";
+}
+function exportData(){
+ let blob=new Blob([JSON.stringify(patients,null,2)],{type:"application/json"});
+ let a=document.createElement("a");a.href=URL.createObjectURL(blob);
+ a.download="pharmacie_menasria_patients.json";a.click();URL.revokeObjectURL(a.href);
+}
+function importData(e){
+ let file=e.target.files[0];if(!file)return;
+ let r=new FileReader();r.onload=()=>{
+  try{let x=JSON.parse(r.result);if(!Array.isArray(x))throw 0;
+   if(confirm("استبدال البيانات الحالية بالنسخة الاحتياطية؟")){patients=x;save();render();renderPatientList();renderReminders();alert("تمت الاستعادة بنجاح.")}
+  }catch{alert("الملف غير صالح.")}
+ };r.readAsText(file);e.target.value="";
+}
+function clearAll(){
+ if(confirm("سيتم حذف جميع المرضى من هذا الجهاز. هل أنت متأكد؟")){
+  if(confirm("تأكيد نهائي: حذف جميع البيانات؟")){patients=[];save();render();renderPatientList();renderReminders()}
+ }
+}
+document.getElementById("date").value=new Date().toISOString().slice(0,10);
+render();
+renderPatientList();
+notifyDue();
+if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js");
+document.addEventListener("visibilitychange",()=>{if(!document.hidden){render();renderPatientList();notifyDue()}});
+</script>
+</body>
+</html>
